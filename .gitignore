@@ -1,0 +1,34 @@
+# Runtime configuration and device records
+/config.json
+/config.*.json
+/private/
+/research/
+/.env
+/.env.*
+/.ssh/
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.log
+
+# Local Python environments and generated packages
+.venv/
+.venv-*/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+*.zip
+*.tar
+*.tar.gz
+.DS_Store
+
+# TV-side development is a separate project
+tv_probe/
+tizen-studio/
+tizen-studio-data/
