@@ -1,0 +1,20 @@
+{
+  "source": "local",
+  "action": "home_assistant",
+  "mapping_verified_on_this_tv": false,
+  "timezone": "America/Chicago",
+  "active_hours": [7, 23],
+  "poll_seconds": 30,
+  "state_directory": "private",
+  "tv": {
+    "host": "YOUR_TV_IP",
+    "port": 8002,
+    "timeout": 8,
+    "token_file": "private/tv-token.json"
+  },
+  "home_assistant": {
+    "url": "http://homeassistant.local:8123",
+    "token_file": "private/ha-token.txt",
+    "art_scene": "scene.s95h_art_on"
+  }
+}
