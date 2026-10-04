@@ -1,0 +1,29 @@
+[Unit]
+Description=Samsung S95H artwork timer and overnight standby
+Wants=network-online.target
+After=network-online.target
+OnFailure=s95h-art-guardian-alert.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+WorkingDirectory="@INSTALL_ROOT@/app"
+ExecStartPre=/usr/bin/flock -w 1500 "@INSTALL_ROOT@/private/service.lock" /usr/bin/true
+ExecStart="@INSTALL_ROOT@/.venv/bin/python" -m art_guardian.service --config "@INSTALL_ROOT@/config.json"
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=10
+TimeoutStartSec=1500
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths="@INSTALL_ROOT@/private"
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

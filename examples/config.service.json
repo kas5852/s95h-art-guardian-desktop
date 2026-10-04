@@ -1,0 +1,14 @@
+{
+  "tv": {
+    "host": "YOUR_TV_IP",
+    "identity": "YOUR_TV_IDENTITY",
+    "wake_mac": "YOUR_TV_MAC"
+  },
+  "ntfy": {
+    "url": "https://YOUR_NTFY_SERVER/YOUR_PRIVATE_TOPIC"
+  },
+  "timezone": "UTC",
+  "poll_seconds": 60,
+  "power_mapping_verified": false,
+  "schedule_enabled": false
+}
