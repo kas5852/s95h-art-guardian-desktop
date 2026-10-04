@@ -1,0 +1,4 @@
+include README.md THIRD_PARTY.md SECURITY.md
+recursive-include docs *.md *.yml
+recursive-include examples *.json *.service
+recursive-include scripts *.sh *.py
