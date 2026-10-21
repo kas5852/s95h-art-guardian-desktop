@@ -16,5 +16,5 @@
   documentation. Their source and downloads are not included in this repository.
 - Samsung documentation and manuals are linked rather than redistributed.
   No Samsung artwork or subscription content is supplied.
-- A project reuse license has not been selected. Dependency licenses remain
-  applicable to the dependencies.
+- This project is MIT licensed (see `LICENSE`). Dependency licenses still
+  apply to the dependencies.

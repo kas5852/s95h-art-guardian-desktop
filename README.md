@@ -93,9 +93,7 @@ Actions with an account credential permitted to manage workflows.
 
 ## Licensing and affiliation
 
-No project reuse license has been selected. Public source availability does not
-grant an open-source reuse license. Third-party dependencies retain their own
-licenses.
+MIT, see [LICENSE](LICENSE). Third-party dependencies keep their own licenses.
 
 This project is independent of Samsung. Samsung, SmartThings, and Art Store are
 named only to identify compatibility.

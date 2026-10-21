@@ -3,6 +3,8 @@ name = "s95h-art-guardian"
 version = "0.1.0"
 description = "Experimental Samsung Art Store diagnostics and guarded recovery"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = ["websocket-client==1.9.2"]
 
 [project.optional-dependencies]
