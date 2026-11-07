@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from art_guardian.service import Service, scheduled_action
+from art_guardian.service import Service, scheduled_action, validate_config
 
 ZONE = ZoneInfo("America/Chicago")
 
@@ -231,3 +231,34 @@ def test_already_watching_tv_at_nine_is_not_interrupted(service):
     service.resume_art()
     assert service.tv.calls == ["info"]
     assert service.tv.timer == "240"
+
+
+def test_startup_validation_rejects_incomplete_config():
+    good = {
+        "tv": {"host": "192.0.2.10", "identity": "duid", "wake_mac": "00:11:22:33:44:55"},
+        "timezone": "America/Chicago",
+    }
+    assert validate_config(good)[1] == 60
+    for key in ("host", "identity", "wake_mac"):
+        bad = {**good, "tv": {**good["tv"], key: "YOUR_PLACEHOLDER"}}
+        with pytest.raises(ValueError, match=key):
+            validate_config(bad)
+        missing = {**good, "tv": {k: v for k, v in good["tv"].items() if k != key}}
+        with pytest.raises(ValueError, match=key):
+            validate_config(missing)
+    with pytest.raises(ValueError, match="wake_mac"):
+        validate_config({**good, "tv": {**good["tv"], "wake_mac": "not-a-mac"}})
+    with pytest.raises(ValueError, match="private LAN"):
+        validate_config({**good, "tv": {**good["tv"], "host": "8.8.8.8"}})
+    with pytest.raises(ValueError, match="poll_seconds"):
+        validate_config({**good, "poll_seconds": 5})
+    with pytest.raises(ValueError, match="verified"):
+        validate_config({**good, "schedule_enabled": True})
+
+
+def test_damaged_state_file_refuses_to_start(tmp_path):
+    (tmp_path / "service-state.json").write_text("{truncated")
+    config = {"tv": {"identity": "test-tv"},
+              "ntfy": {"url": "https://notify.example.invalid/example-topic"}}
+    with pytest.raises(ValueError, match="in flight"):
+        Service(config, tmp_path, TV(), Power())

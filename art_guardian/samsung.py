@@ -54,6 +54,14 @@ class Samsung:
                 local_self_signed=True,
             )
 
+    def saved_token(self):
+        """An unreadable pairing file re-pairs on the next connection, never wedges the client."""
+        try:
+            token = json.loads(self.token_file.read_text())["token"]
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        return token if isinstance(token, str) and token else None
+
     def art_request(self, name, value=None):
         import websocket
 
@@ -64,20 +72,22 @@ class Samsung:
         if name == "set_motion_timer" and value not in ("off", "60", "120", "180", "240"):
             raise ValueError("Unsupported timer test value")
         parameters = {"name": base64.b64encode(b"S95H Art Guardian").decode()}
-        if self.token_file.exists():
-            parameters["token"] = json.loads(self.token_file.read_text())["token"]
+        token = self.saved_token()
+        if token:
+            parameters["token"] = token
         scheme = "wss" if self.port == 8002 else "ws"
         url = (
             f"{scheme}://{self.host}:{self.port}/api/v2/channels/com.samsung.art-app?"
             + urlencode(parameters)
         )
-        deadline = time.monotonic() + self.timeout
         connection = websocket.create_connection(
             url,
             timeout=self.timeout,
             sslopt={"cert_reqs": ssl.CERT_NONE},
             http_no_proxy=[self.host],
         )
+        # Budget the response wait from after the handshake; connecting can consume the timeout.
+        deadline = time.monotonic() + self.timeout
         request_id = str(uuid.uuid4())
         sent = False
         try:

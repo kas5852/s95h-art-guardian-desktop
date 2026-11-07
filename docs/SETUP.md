@@ -64,6 +64,12 @@ The Home Assistant adapter is optional. It requires a fresh, genuinely observed
 mode source or an explicitly configured scene. Cached state or a fabricated
 observation timestamp does not prove TV health. Credentials stay in local files.
 
+Every Home Assistant call carries your long-lived access token, which grants full
+control of that Home Assistant. The adapter therefore refuses a plain `http://`
+URL unless the host is loopback. Use `https://`, or, if you accept that anyone on
+your network can read the token off the wire, add `"allow_insecure_http": true`
+to the `home_assistant` section.
+
 To pause either controller, create `private/PAUSE`. Stop the earlier recovery
 controller before inspecting and resetting its latch. No controller or startup
 service is installed automatically by `pip install`.

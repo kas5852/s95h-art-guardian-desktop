@@ -1,5 +1,6 @@
 """Optional Home Assistant source and scene actuator; credentials stay in a local file."""
 
+import ipaddress
 import time
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,18 @@ from urllib.parse import quote, urlparse
 from .network import request_json
 
 
+def loopback(hostname):
+    if hostname == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(hostname).is_loopback
+    except ValueError:
+        return False
+
+
 class HomeAssistant:
+    """A long-lived Home Assistant token is sent on every call, so the transport matters."""
+
     def __init__(self, config, root: Path):
         self.config = config
         self.url = config["url"].rstrip("/")
@@ -17,6 +29,15 @@ class HomeAssistant:
             raise ValueError("Home Assistant URL must use http or https")
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("Use a plain Home Assistant URL without embedded credentials")
+        if (
+            parsed.scheme == "http"
+            and not loopback(parsed.hostname)
+            and config.get("allow_insecure_http") is not True
+        ):
+            raise ValueError(
+                "Refusing to send a Home Assistant token over plain http to a remote host; "
+                'use https, or set "allow_insecure_http": true to accept LAN eavesdropping'
+            )
         self.token_file = (root / config["token_file"]).resolve()
 
     def call(self, path, payload=None):
