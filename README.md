@@ -78,18 +78,47 @@ to cut mains power as a substitute for standby.
 
 ## Development
 
+The working implementation is Python. A Java 25 version is planned, and its
+Gradle build is already in place. [AGENTS.md](AGENTS.md) has the conventions,
+commands, and safety rules for both.
+
 ```sh
 .venv/bin/python -m pip install '.[dev]'
 .venv/bin/python -m pytest -q
-.venv/bin/ruff check art_guardian tests
+.venv/bin/ruff check art_guardian tests scripts
+./gradlew build
 ```
+
+`./gradlew build` downloads JDK 25 on first use, then formats, compiles,
+analyses, and tests the Java code. Java code carries no comments or Javadoc, and
+the build fails if it finds any.
 
 Tests use fabricated device data and reserved example addresses. No real TV,
 notification service, or personal configuration is needed.
 
-A [CI template](docs/ci-workflow.example.yml) runs the tests on macOS and Linux
-with Python 3.11 and 3.14. Copy it into `.github/workflows/` to enable GitHub
-Actions with an account credential permitted to manage workflows.
+GitHub Actions runs on every push and pull request. One job, **All checks
+passed**, sums up all of the others, so it is the single check to require
+before merging. It fails if any job failed, was cancelled, or was skipped. The
+only allowed skip is dependency review outside pull requests, because GitHub
+can run that check only on a pull request. It covers:
+
+- Python lint, tests on macOS and Linux with Python 3.11 and 3.14, and a clean
+  package install.
+- The Java build on macOS and Linux, including the tests that prove each Java
+  rule fails the build.
+- Workflow security: actionlint and zizmor.
+- A secret scan of the full git history with gitleaks.
+- CodeQL security analysis of Python, the workflows, and Java once Java source
+  exists.
+- Dependency review, which blocks pull requests that add a known-vulnerable
+  dependency.
+
+Two more workflows run after changes reach `main`: **Scorecard** rates
+supply-chain security, and **Dependency submission** reports Gradle dependencies
+so GitHub can alert on them. CodeQL also runs weekly.
+
+Dependabot proposes weekly updates for actions, Gradle, and Python packages. It
+waits seven days after each release before proposing it.
 
 ## Licensing and affiliation
 

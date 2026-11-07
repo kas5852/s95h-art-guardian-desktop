@@ -1,0 +1,57 @@
+name: CodeQL
+
+on:
+  workflow_call:
+  schedule:
+    - cron: "23 7 * * 1"
+
+permissions: {}
+
+jobs:
+  languages:
+    name: Choose languages to analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      list: ${{ steps.detect.outputs.list }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - id: detect
+        name: Add Java once Java source exists
+        run: |
+          if git ls-files -- 'src/*.java' | grep --quiet .; then
+            list='["actions","python","java-kotlin"]'
+          else
+            list='["actions","python"]'
+            echo "::notice title=CodeQL::No Java source yet, so Java is not analyzed."
+          fi
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    needs: languages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON(needs.languages.outputs.list) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066
+        with:
+          category: /language:${{ matrix.language }}
