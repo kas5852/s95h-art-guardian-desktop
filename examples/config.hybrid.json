@@ -13,7 +13,7 @@
     "token_file": "private/tv-token.json"
   },
   "home_assistant": {
-    "url": "http://homeassistant.local:8123",
+    "url": "https://homeassistant.local:8123",
     "token_file": "private/ha-token.txt",
     "art_scene": "scene.s95h_art_on"
   }

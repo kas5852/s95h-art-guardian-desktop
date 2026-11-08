@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +13,7 @@ from zoneinfo import ZoneInfo
 from .ipcontrol import IPControl, wake
 from .notifications import Notifications
 from .repair import change_timer, timer_setting
-from .samsung import Samsung
+from .samsung import Samsung, private_ipv4
 from .storage import atomic_json, exclusive_lock
 
 LOGGER = logging.getLogger(__name__)
@@ -31,13 +32,31 @@ def quiet(now):
     return 4 <= now.hour < 9
 
 
+def validate_config(config):
+    """Fail at startup, not at 4 AM, when a required field is missing or malformed."""
+    tv = config.get("tv")
+    if not isinstance(tv, dict):
+        raise TypeError('config needs a "tv" object with host, identity, and wake_mac')
+    for name in ("host", "identity", "wake_mac"):
+        value = tv.get(name)
+        if not isinstance(value, str) or not value or value.startswith("YOUR_"):
+            raise ValueError(f'config["tv"]["{name}"] must be set to a real value')
+    private_ipv4(tv["host"])
+    if not re.fullmatch(r"(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}", tv["wake_mac"]):
+        raise ValueError('config["tv"]["wake_mac"] must look like 00:11:22:33:44:55')
+    interval = config.get("poll_seconds", 60)
+    if not isinstance(interval, (int, float)) or not 30 <= interval <= 120:
+        raise ValueError("poll_seconds must be 30–120")
+    if config.get("schedule_enabled") and config.get("power_mapping_verified") is not True:
+        raise ValueError("Schedule requires the supervised power test to be verified")
+    return ZoneInfo(config.get("timezone", "America/Chicago")), interval
+
+
 class Service:
     def __init__(self, config, directory, tv, power, state=None):
         self.config, self.directory, self.tv, self.power = config, directory, tv, power
         self.path = directory / "service-state.json"
-        self.state = state if state is not None else (
-            json.loads(self.path.read_text()) if self.path.exists() else {}
-        )
+        self.state = state if state is not None else self.load()
         if not isinstance(self.state, dict):
             raise TypeError("Invalid service state")
         self.alerts = Notifications(config["ntfy"], directory, self.state)
@@ -50,6 +69,19 @@ class Service:
                     "the action automatically. Please check the TV.",
                 )
                 self.save()
+
+    def load(self):
+        """Refuse to start on damaged state: it records whether a power action was in flight."""
+        if not self.path.exists():
+            return {}
+        try:
+            return json.loads(self.path.read_text())
+        except ValueError:
+            raise ValueError(
+                f"{self.path} is not readable JSON. It records whether a power action was "
+                "in flight, so the controller will not start. Inspect the TV, then move the "
+                "file aside to start from a clean state."
+            ) from None
 
     def save(self):
         atomic_json(self.path, self.state)
@@ -257,12 +289,7 @@ def main():
     root = args.config.resolve().parent
     directory = root / "private"
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    zone = ZoneInfo(config.get("timezone", "America/Chicago"))
-    interval = config.get("poll_seconds", 60)
-    if not isinstance(interval, (int, float)) or not 30 <= interval <= 120:
-        raise ValueError("poll_seconds must be 30–120")
-    if config.get("schedule_enabled") and config.get("power_mapping_verified") is not True:
-        raise ValueError("Schedule requires the supervised power test to be verified")
+    zone, interval = validate_config(config)
     tv = Samsung(config["tv"]["host"], directory / "tv-token.json")
     power = IPControl(tv.host, directory / "ip-control-token.json")
     with exclusive_lock(directory / "service.lock"):

@@ -32,3 +32,9 @@ dist/
 tv_probe/
 tizen-studio/
 tizen-studio-data/
+
+.gradle/
+.kotlin/
+.idea/
+*.iml
+out/

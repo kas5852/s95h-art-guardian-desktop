@@ -209,3 +209,27 @@ def test_diagnostics_do_not_change_tv_settings(tmp_path):
     report = inspect_tv(tv, art=True)
     assert "SECRET" not in json.dumps(report)
     assert all(not name.startswith("set_") for name in requests)
+
+
+def test_ha_refuses_plain_http_token_to_a_remote_host(tmp_path):
+    config = {
+        "url": "http://homeassistant.local:8123",
+        "token_file": "token",
+        "mode_entity": "sensor.mode",
+    }
+    with pytest.raises(ValueError, match="plain http"):
+        HomeAssistant(config, tmp_path)
+    HomeAssistant({**config, "allow_insecure_http": True}, tmp_path)
+    HomeAssistant({**config, "url": "https://homeassistant.local:8123"}, tmp_path)
+    HomeAssistant({**config, "url": "http://127.0.0.1:8123"}, tmp_path)
+
+
+def test_unreadable_pairing_file_does_not_wedge_the_art_client(tmp_path):
+    token_file = tmp_path / "tv-token.json"
+    tv = Samsung("192.0.2.10", token_file)
+    assert tv.saved_token() is None
+    for content in ("", "{", "[]", '{"other": 1}', '{"token": ""}', '{"token": 5}'):
+        token_file.write_text(content)
+        assert tv.saved_token() is None
+    atomic_json(token_file, {"token": "abc"})
+    assert tv.saved_token() == "abc"
